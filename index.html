@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Blackjack Trainer</title>
+<meta name="theme-color" content="#07402a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BJ Trainer">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230b5d3b'/><text x='50' y='72' font-size='64' text-anchor='middle' fill='%23e8c15a'>♠</text></svg>">
+<style>
+  :root {
+    --felt: #0b5d3b; --felt-dark: #07402a; --gold: #e8c15a; --text: #f3f6f4;
+    --muted: #b8cfc3; --ok: #3ddc84; --bad: #ff5c5c; --panel: rgba(0,0,0,.25);
+    --H: #e05555; --S: #e8c15a; --D: #3d8bfd; --P: #3ddc84; --R: #b07cff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  button, .card, nav, .act { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  header { padding-top: max(14px, env(safe-area-inset-top)) !important; }
+  main { padding-bottom: max(18px, env(safe-area-inset-bottom)) !important; }
+  .act:active:not(:disabled), .chip:active:not(:disabled) { transform: scale(.95); }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text); min-height: 100vh;
+    background: radial-gradient(ellipse at center, var(--felt) 0%, var(--felt-dark) 100%);
+  }
+  header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 20px; background: rgba(0,0,0,.3); }
+  h1 { margin: 0; font-size: 20px; letter-spacing: .5px; }
+  h1 span { color: var(--gold); }
+  nav button, .btn {
+    background: rgba(255,255,255,.08); color: var(--text); border: 1px solid rgba(255,255,255,.18);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+  }
+  nav button.active { background: var(--gold); color: #222; border-color: var(--gold); }
+  nav button:hover, .btn:hover { filter: brightness(1.15); }
+  main { max-width: 1000px; margin: 0 auto; padding: 18px; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+  .panel { background: var(--panel); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  label { font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  select, input[type=number] { background: #123; color: var(--text); border: 1px solid #456; border-radius: 6px; padding: 5px 8px; font-size: 14px; }
+
+  .table-area { text-align: center; padding: 10px 0; }
+  .zone-label { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin: 6px 0; }
+  .hand { display: flex; justify-content: center; gap: 10px; min-height: 120px; }
+  .card {
+    width: 78px; height: 112px; background: #fff; border-radius: 8px; color: #111;
+    box-shadow: 0 4px 10px rgba(0,0,0,.4); position: relative; font-weight: 700;
+    animation: deal .25s ease-out;
+  }
+  .card.red { color: #c62828; }
+  .card .tl { position: absolute; top: 5px; left: 7px; font-size: 18px; line-height: 1; text-align: center; }
+  .card .br { position: absolute; bottom: 5px; right: 7px; font-size: 18px; line-height: 1; transform: rotate(180deg); text-align: center; }
+  .card .mid { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 38px; }
+  .card.back { background: repeating-linear-gradient(45deg, #8b1e2d 0 6px, #a8293b 6px 12px); border: 4px solid #fff; }
+  @keyframes deal { from { transform: translateY(-20px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+  .total { margin-top: 6px; font-size: 15px; color: var(--gold); font-weight: 600; }
+
+  .actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+  .act { min-width: 110px; padding: 12px 16px; font-size: 16px; font-weight: 700; border-radius: 10px; border: none; cursor: pointer; color: #111; transition: transform .1s; }
+  .act:hover:not(:disabled) { transform: translateY(-2px); }
+  .act:disabled { opacity: .3; cursor: not-allowed; }
+  .act small { display: block; font-size: 11px; font-weight: 500; opacity: .7; }
+  .act.H { background: var(--H); color: #fff; } .act.S { background: var(--S); }
+  .act.D { background: var(--D); color: #fff; } .act.P { background: var(--P); }
+  .act.R { background: var(--R); color: #fff; }
+
+  .feedback { min-height: 64px; text-align: center; font-size: 17px; padding: 10px; border-radius: 10px; margin-top: 8px; }
+  .feedback.ok { background: rgba(61,220,132,.15); border: 1px solid var(--ok); }
+  .feedback.bad { background: rgba(255,92,92,.15); border: 1px solid var(--bad); }
+  .feedback b { font-size: 20px; }
+  .hint { color: var(--muted); font-size: 13px; text-align: center; margin-top: 6px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+  .stat { background: rgba(0,0,0,.25); border-radius: 10px; padding: 10px; text-align: center; }
+  .stat .v { font-size: 24px; font-weight: 800; color: var(--gold); }
+  .stat .l { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .weak { list-style: none; padding: 0; margin: 8px 0 0; }
+  .weak li { display: flex; justify-content: space-between; padding: 6px 10px; background: rgba(0,0,0,.2); border-radius: 6px; margin-bottom: 4px; font-size: 14px; }
+
+  table.chart { border-collapse: collapse; margin: 0 auto 18px; font-size: 13px; }
+  table.chart th, table.chart td { width: 40px; height: 28px; text-align: center; border: 1px solid rgba(0,0,0,.4); }
+  table.chart th { background: rgba(0,0,0,.35); color: var(--gold); }
+  table.chart td { color: #111; font-weight: 700; }
+  table.chart td.H { background: var(--H); color: #fff; } table.chart td.S { background: var(--S); }
+  table.chart td.D { background: var(--D); color: #fff; } table.chart td.P { background: var(--P); }
+  table.chart td.R { background: var(--R); color: #fff; }
+  table.chart td.hl { outline: 3px solid #fff; outline-offset: -3px; box-shadow: 0 0 12px #fff; }
+  .chart-wrap { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .chart-wrap h3 { text-align: center; margin: 4px 0 8px; color: var(--gold); }
+  .legend { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; font-size: 13px; margin-bottom: 14px; }
+  .legend span::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; background: var(--c); }
+  .mini-row { margin-top: 10px; display: inline-block; }
+
+  .count-card-area { display: flex; justify-content: center; align-items: center; min-height: 140px; }
+  .count-card-area .card { width: 100px; height: 144px; }
+  .count-card-area .card .mid { font-size: 50px; }
+  .big-input { font-size: 22px; width: 120px; text-align: center; padding: 8px; }
+  p.info { color: var(--muted); font-size: 14px; line-height: 1.5; }
+  kbd { background: rgba(255,255,255,.15); border-radius: 4px; padding: 1px 6px; font-size: 12px; }
+  .why { margin: 8px auto 0; font-size: 14px; line-height: 1.55; text-align: left; max-width: 640px; }
+
+  /* ---- full game ---- */
+  .bankbar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+  .money { font-size: 20px; font-weight: 800; color: var(--gold); }
+  .chip {
+    width: 52px; height: 52px; border-radius: 50%; border: 4px dashed rgba(255,255,255,.75);
+    font-weight: 800; cursor: pointer; color: #fff; font-size: 14px; box-shadow: 0 3px 8px rgba(0,0,0,.4);
+  }
+  .chip[data-v="10"] { background: #1e6fd9; } .chip[data-v="25"] { background: #2e9e4f; }
+  .chip[data-v="100"] { background: #222; } .chip[data-v="500"] { background: #7b2cbf; }
+  .chip:disabled, .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn.gold { background: var(--gold); color: #222; border-color: var(--gold); }
+  .ghands { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+  .ghand { padding: 8px; border-radius: 12px; border: 2px solid transparent; }
+  .ghand.active { border-color: var(--gold); background: rgba(232,193,90,.08); }
+  .ghand .meta { font-size: 14px; margin-top: 6px; color: var(--muted); }
+  .o-win, .o-bj { color: var(--ok); } .o-lose, .o-bust { color: var(--bad); } .o-push, .o-surr { color: var(--gold); }
+  .count-badge { font-size: 13px; color: var(--muted); min-height: 18px; }
+  .gmsg { font-size: 20px; font-weight: 800; min-height: 30px; margin: 6px 0; }
+
+  details.settings summary { cursor: pointer; color: var(--gold); font-weight: 600; font-size: 14px; }
+  details.settings[open] summary { margin-bottom: 10px; }
+
+  @media (max-width: 600px) {
+    header { padding: 10px 12px; gap: 8px; }
+    h1 { font-size: 17px; }
+    nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
+    .chip { width: 46px; height: 46px; font-size: 13px; }
+    .money { font-size: 17px; }
+    .gmsg { font-size: 17px; }
+    nav button { padding: 8px 6px; font-size: 13px; }
+    main { padding: 10px; }
+    .panel { padding: 12px; margin-bottom: 10px; }
+    .hand { min-height: 96px; gap: 8px; }
+    .card { width: 62px; height: 90px; }
+    .card .mid { font-size: 30px; }
+    .card .tl, .card .br { font-size: 15px; }
+    .zone-label { margin: 2px 0; }
+    .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 6px; }
+    .act { min-width: 0; padding: 14px 4px; font-size: 15px; }
+    .act small { display: none; }
+    .hint { display: none; }
+    .feedback { font-size: 15px; }
+    table.chart { font-size: 11px; }
+    table.chart th, table.chart td { width: 27px; height: 24px; }
+    .chart-wrap { gap: 10px; }
+    .count-card-area .card { width: 84px; height: 120px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>♠ Blackjack <span>Trainer</span></h1>
+  <nav>
+    <button data-tab="drill" class="active">Stratégia gyakorló</button>
+    <button data-tab="game">Játék</button>
+    <button data-tab="chart">Stratégia tábla</button>
+    <button data-tab="count">Lapszámolás</button>
+    <button data-tab="stats">Statisztika</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ DRILL ============ -->
+  <section id="drill" class="tab active">
+    <details class="panel settings" id="settingsBox"><summary>⚙ Beállítások</summary><div class="row">
+      <label>Kéz típusa
+        <select id="handType">
+          <option value="all">Vegyes</option>
+          <option value="hard">Kemény (hard)</option>
+          <option value="soft">Lágy (soft, ászos)</option>
+          <option value="pair">Párok</option>
+          <option value="mistakes">Csak a hibáim</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="ruleH17"> Osztó húz lágy 17-re (H17)</label>
+      <label><input type="checkbox" id="ruleDAS" checked> Duplázás splitelés után (DAS)</label>
+      <label><input type="checkbox" id="ruleSurr" checked> Feladás (late surrender)</label>
+      <label><input type="checkbox" id="autoNext" checked> Automatikus következő (helyes válasznál)</label>
+    </div></details>
+
+    <div class="panel table-area">
+      <div class="zone-label">Osztó</div>
+      <div class="hand" id="dealerHand"></div>
+      <div class="zone-label" style="margin-top:18px">Te</div>
+      <div class="hand" id="playerHand"></div>
+      <div class="total" id="playerTotal"></div>
+
+      <div class="actions">
+        <button class="act H" data-a="H">Lap<small>Hit · H</small></button>
+        <button class="act S" data-a="S">Megáll<small>Stand · S</small></button>
+        <button class="act D" data-a="D">Duplázás<small>Double · D</small></button>
+        <button class="act P" data-a="P">Split<small>Split · P</small></button>
+        <button class="act R" data-a="R">Feladás<small>Surrender · R</small></button>
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div class="hint">Billentyűk: <kbd>H</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>P</kbd> <kbd>R</kbd> · következő: <kbd>Space</kbd> / <kbd>Enter</kbd></div>
+      <div style="margin-top:10px"><button class="btn" id="nextBtn">Következő kéz ▶</button></div>
+    </div>
+
+    <div class="panel">
+      <div class="stats">
+        <div class="stat"><div class="v" id="sAcc">–</div><div class="l">Pontosság</div></div>
+        <div class="stat"><div class="v" id="sTotal">0</div><div class="l">Kezek</div></div>
+        <div class="stat"><div class="v" id="sStreak">0</div><div class="l">Sorozat</div></div>
+        <div class="stat"><div class="v" id="sBest">0</div><div class="l">Legjobb sorozat</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FULL GAME ============ -->
+  <section id="game" class="tab">
+    <div class="panel">
+      <div class="bankbar">
+        <div>Bank: <span class="money" id="gBank"></span></div>
+        <div>Tét: <span class="money" id="gBet"></span></div>
+        <div class="row" style="gap:8px">
+          <button class="chip" data-v="10">10</button>
+          <button class="chip" data-v="25">25</button>
+          <button class="chip" data-v="100">100</button>
+          <button class="chip" data-v="500">500</button>
+        </div>
+        <div class="row" style="gap:8px">
+          <button class="btn" id="gClear">Törlés</button>
+          <button class="btn gold" id="gDeal">Osztás ▶</button>
+          <button class="btn" id="gRefill">Bank feltöltése (1000)</button>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label><input type="checkbox" id="gCoach" checked> Tanácsadó (jelzi a stratégiai hibákat)</label>
+        <label><input type="checkbox" id="gShowCount"> Lapszámolás mutatása (Hi-Lo)</label>
+      </div>
+      <p class="info" style="margin:8px 0 0">6 pakli · Blackjack 3:2 fizet · max. 4 kéz splittel · a szabályokat (H17 / DAS / feladás) a „Stratégia gyakorló” beállításaiból veszi.</p>
+    </div>
+
+    <div class="panel table-area">
+      <div class="count-badge" id="gCount"></div>
+      <div class="zone-label">Osztó</div>
+      <div class="hand" id="gDealer"></div>
+      <div class="total" id="gDealerTotal"></div>
+      <div class="gmsg" id="gMsg"></div>
+      <div class="zone-label">Te</div>
+      <div class="ghands" id="gHands"></div>
+      <div class="actions">
+        <button class="act H" id="gH" data-g="H">Lap<small>Hit · H</small></button>
+        <button class="act S" id="gS" data-g="S">Megáll<small>Stand · S</small></button>
+        <button class="act D" id="gD" data-g="D">Duplázás<small>Double · D</small></button>
+        <button class="act P" id="gP" data-g="P">Split<small>Split · P</small></button>
+        <button class="act R" id="gR" data-g="R">Feladás<small>Surrender · R</small></button>
+      </div>
+      <div class="feedback" id="gCoachBox"></div>
+      <div class="hint">Billentyűk: <kbd>H</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>P</kbd> <kbd>R</kbd> · osztás: <kbd>Space</kbd> / <kbd>Enter</kbd></div>
+    </div>
+
+    <div class="panel"><div class="stats" id="gStats"></div></div>
+  </section>
+
+  <!-- ============ CHART ============ -->
+  <section id="chart" class="tab">
+    <div class="panel">
+      <p class="info">Alapstratégia 4–8 paklira. A szabályokat a „Stratégia gyakorló” fülön állíthatod (H17 / DAS / feladás) – a tábla ezekhez igazodik. Az első két lapra vonatkozó döntést mutatja.</p>
+      <div class="legend">
+        <span style="--c:var(--H)">H = Lap</span>
+        <span style="--c:var(--S)">S = Megáll</span>
+        <span style="--c:var(--D)">D = Duplázás (ha nem lehet: lap)</span>
+        <span style="--c:var(--D)">Ds = Duplázás (ha nem lehet: megáll)</span>
+        <span style="--c:var(--P)">P = Split</span>
+        <span style="--c:var(--R)">R = Feladás</span>
+      </div>
+      <div class="chart-wrap" id="chartWrap"></div>
+    </div>
+  </section>
+
+  <!-- ============ COUNT ============ -->
+  <section id="count" class="tab">
+    <div class="panel">
+      <p class="info"><b>Hi-Lo számolás:</b> 2–6 = <b>+1</b>, 7–9 = <b>0</b>, 10/J/Q/K/A = <b>−1</b>. Figyeld a lapokat, a végén add meg a futó összeget (running count). Ha megadod a paklik számát, a valós számot (true count) is kiszámolja.</p>
+      <div class="row">
+        <label>Lapok száma <input type="number" id="cCards" value="20" min="5" max="312"></label>
+        <label>Sebesség
+          <select id="cSpeed">
+            <option value="1500">Lassú (1,5 mp)</option>
+            <option value="1000" selected>Közepes (1 mp)</option>
+            <option value="600">Gyors (0,6 mp)</option>
+            <option value="350">Nagyon gyors (0,35 mp)</option>
+          </select>
+        </label>
+        <label>Lapok egyszerre
+          <select id="cGroup"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+        </label>
+        <button class="btn" id="cStart">Indítás ▶</button>
+      </div>
+    </div>
+    <div class="panel table-area">
+      <div class="zone-label" id="cProgress">Nyomd meg az Indítás gombot</div>
+      <div class="count-card-area" id="cArea"></div>
+      <div id="cAnswer" style="display:none; margin-top:14px">
+        <div class="row" style="justify-content:center">
+          <label>Futó összeg: <input type="number" id="cInput" class="big-input"></label>
+          <button class="btn" id="cCheck">Ellenőrzés</button>
+        </div>
+      </div>
+      <div class="feedback" id="cFeedback"></div>
+    </div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section id="stats" class="tab">
+    <div class="panel">
+      <h3 style="margin-top:0">Kategóriák szerint</h3>
+      <div class="stats" id="catStats"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Leggyakoribb hibáid</h3>
+      <ul class="weak" id="weakList"></ul>
+      <p class="info">Tipp: a gyakorlóban válaszd a „Csak a hibáim” típust, hogy ezeket gyakorold.</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Lapszámolás</h3>
+      <div class="stats" id="countStats"></div>
+    </div>
+    <button class="btn" id="resetStats">Statisztika törlése</button>
+  </section>
+</main>
+
+<script>
+/* ================== STRATEGY DATA (4-8 decks, S17 base) ================== */
+// Columns: dealer upcard 2,3,4,5,6,7,8,9,10,A
+const UP = ['2','3','4','5','6','7','8','9','10','A'];
+const r = s => s.trim().split(/\s+/);
+const HARD = {
+  5: r('H H H H H H H H H H'), 6: r('H H H H H H H H H H'), 7: r('H H H H H H H H H H'), 8: r('H H H H H H H H H H'),
+  9: r('H D D D D H H H H H'), 10: r('D D D D D D D D H H'), 11: r('D D D D D D D D D H'),
+  12: r('H H S S S H H H H H'), 13: r('S S S S S H H H H H'), 14: r('S S S S S H H H H H'),
+  15: r('S S S S S H H H Rh H'), 16: r('S S S S S H H Rh Rh Rh'),
+  17: r('S S S S S S S S S S'), 18: r('S S S S S S S S S S'), 19: r('S S S S S S S S S S'),
+  20: r('S S S S S S S S S S'), 21: r('S S S S S S S S S S'),
+};
+const SOFT = { // key = other card value (A+x)
+  2: r('H H H D D H H H H H'), 3: r('H H H D D H H H H H'), 4: r('H H D D D H H H H H'),
+  5: r('H H D D D H H H H H'), 6: r('H D D D D H H H H H'), 7: r('S Ds Ds Ds Ds S S H H H'),
+  8: r('S S S S S S S S S S'), 9: r('S S S S S S S S S S'),
+};
+const PAIR = { // key = card value, 11 = aces
+  2: r('Ph Ph P P P P H H H H'), 3: r('Ph Ph P P P P H H H H'), 4: r('H H H Ph Ph H H H H H'),
+  5: r('D D D D D D D D H H'), 6: r('Ph P P P P H H H H H'), 7: r('P P P P P P H H H H'),
+  8: r('P P P P P P P P P P'), 9: r('P P P P P S P P S S'), 10: r('S S S S S S S S S S'),
+  11: r('P P P P P P P P P P'),
+};
+// H17 adjustments
+function h17Patch(kind, key, col, code) {
+  if (kind === 'hard') {
+    if (key === 11 && col === 9) return 'D';
+    if (key === 15 && col === 9) return 'Rh';
+    if (key === 17 && col === 9) return 'Rs';
+  }
+  if (kind === 'soft') {
+    if (key === 7 && col === 0) return 'Ds';
+    if (key === 8 && col === 4) return 'Ds';
+  }
+  if (kind === 'pair' && key === 8 && col === 9) return 'Rp';
+  return code;
+}
+
+const rules = { h17: false, das: true, surr: true };
+
+function rawCode(kind, key, col) {
+  const tbl = kind === 'hard' ? HARD : kind === 'soft' ? SOFT : PAIR;
+  let code = tbl[key][col];
+  if (rules.h17) code = h17Patch(kind, key, col, code);
+  return code;
+}
+// Resolve for an initial two-card decision
+function resolve(code) {
+  switch (code) {
+    case 'D': return 'D';
+    case 'Ds': return 'D';
+    case 'Ph': return rules.das ? 'P' : 'H';
+    case 'Rh': return rules.surr ? 'R' : 'H';
+    case 'Rs': return rules.surr ? 'R' : 'S';
+    case 'Rp': return rules.surr ? 'R' : 'P';
+    default: return code;
+  }
+}
+function chartLabel(code) {
+  const res = resolve(code);
+  if (code === 'Ds') return 'Ds';
+  return res;
+}
+
+const ACT_NAME = { H: 'Lap (Hit)', S: 'Megáll (Stand)', D: 'Duplázás (Double)', P: 'Split', R: 'Feladás (Surrender)' };
+
+/* ================== CARDS ================== */
+const SUITS = ['♠', '♥', '♦', '♣'];
+const rand = n => Math.floor(Math.random() * n);
+const pick = a => a[rand(a.length)];
+function rankForValue(v) {
+  if (v === 11) return 'A';
+  if (v === 10) return pick(['10', 'J', 'Q', 'K']);
+  return String(v);
+}
+function makeCard(v) { return { v, rank: rankForValue(v), suit: pick(SUITS) }; }
+function randomValue() { // realistic distribution
+  const x = rand(13);
+  if (x === 0) return 11;
+  if (x >= 9) return 10;
+  return x + 1;
+}
+function cardEl(c) {
+  const d = document.createElement('div');
+  d.className = 'card' + (c.suit === '♥' || c.suit === '♦' ? ' red' : '');
+  d.innerHTML = `<div class="tl">${c.rank}<br>${c.suit}</div><div class="mid">${c.suit}</div><div class="br">${c.rank}<br>${c.suit}</div>`;
+  return d;
+}
+function backEl() { const d = document.createElement('div'); d.className = 'card back'; return d; }
+
+/* ================== STATE / STORAGE ================== */
+const LS = 'bjTrainerStats_v1';
+let stats = load();
+function load() {
+  try { return Object.assign(blankStats(), JSON.parse(localStorage.getItem(LS)) || {}); }
+  catch { return blankStats(); }
+}
+function blankStats() {
+  return { total: 0, correct: 0, streak: 0, best: 0,
+    cat: { hard: [0, 0], soft: [0, 0], pair: [0, 0] }, mistakes: {},
+    count: { rounds: 0, correct: 0 } };
+}
+function save() { localStorage.setItem(LS, JSON.stringify(stats)); }
+
+/* ================== DRILL ================== */
+let cur = null, answered = false, autoTimer = null;
+
+function classify(p1, p2) {
+  if (p1.v === p2.v) return { kind: 'pair', key: p1.v };
+  if (p1.v === 11 || p2.v === 11) return { kind: 'soft', key: p1.v === 11 ? p2.v : p1.v };
+  return { kind: 'hard', key: p1.v + p2.v };
+}
+function genHand(type) {
+  if (type === 'mistakes') {
+    const keys = Object.keys(stats.mistakes);
+    if (keys.length) {
+      // weighted by mistake count
+      let tot = keys.reduce((s, k) => s + stats.mistakes[k], 0), x = Math.random() * tot;
+      for (const k of keys) { x -= stats.mistakes[k]; if (x <= 0) return handFromKey(k); }
+      return handFromKey(keys[0]);
+    }
+    type = 'all';
+  }
+  if (type === 'all') {
+    const x = Math.random();
+    type = x < 0.6 ? 'hard' : x < 0.8 ? 'soft' : 'pair';
+  }
+  let a, b;
+  if (type === 'pair') { a = randomValue(); b = a; }
+  else if (type === 'soft') { a = 11; b = 2 + rand(8); }
+  else { do { a = 2 + rand(9); b = Math.random() < 0.3 ? 10 : 2 + rand(9); } while (a === b); }
+  const cards = Math.random() < 0.5 ? [makeCard(a), makeCard(b)] : [makeCard(b), makeCard(a)];
+  return { cards, up: makeCard(randomValue()) };
+}
+// key format: kind|key|col
+function handFromKey(k) {
+  const [kind, keyS, colS] = k.split('|'); const key = +keyS, col = +colS;
+  const upV = col === 9 ? 11 : col + 2;
+  let a, b;
+  if (kind === 'pair') { a = b = key; }
+  else if (kind === 'soft') { a = 11; b = key; }
+  else { // split hard total into two distinct non-ace values
+    const opts = [];
+    for (let x = 2; x <= 10; x++) { const y = key - x; if (y >= 2 && y <= 10 && y !== x) opts.push([x, y]); }
+    [a, b] = pick(opts);
+  }
+  return { cards: [makeCard(a), makeCard(b)], up: makeCard(upV) };
+}
+function colOf(up) { return up.v === 11 ? 9 : up.v - 2; }
+function handTitle(info) {
+  if (info.kind === 'pair') return info.key === 11 ? 'Ász pár' : `${info.key}-es pár`;
+  if (info.kind === 'soft') return `Lágy ${11 + info.key} (A+${info.key})`;
+  return `Kemény ${info.key}`;
+}
+
+function newHand() {
+  clearTimeout(autoTimer);
+  const h = genHand(document.getElementById('handType').value);
+  const info = classify(h.cards[0], h.cards[1]);
+  const col = colOf(h.up);
+  const code = rawCode(info.kind, info.key, col);
+  cur = { ...h, info, col, code, correct: resolve(code) };
+  answered = false;
+
+  const dh = document.getElementById('dealerHand'); dh.innerHTML = '';
+  dh.append(cardEl(h.up), backEl());
+  const ph = document.getElementById('playerHand'); ph.innerHTML = '';
+  h.cards.forEach(c => ph.append(cardEl(c)));
+  document.getElementById('playerTotal').textContent = handTitle(info);
+
+  document.querySelector('.act.P').disabled = info.kind !== 'pair';
+  document.querySelector('.act.R').style.display = rules.surr ? '' : 'none';
+  const fb = document.getElementById('feedback'); fb.className = 'feedback'; fb.innerHTML = '';
+}
+
+function answer(a) {
+  if (!cur || answered) return;
+  if (a === 'P' && cur.info.kind !== 'pair') return;
+  if (a === 'R' && !rules.surr) return;
+  answered = true;
+  const ok = a === cur.correct;
+  const k = `${cur.info.kind}|${cur.info.key}|${cur.col}`;
+  stats.total++; stats.cat[cur.info.kind][1]++;
+  if (ok) {
+    stats.correct++; stats.streak++; stats.cat[cur.info.kind][0]++;
+    stats.best = Math.max(stats.best, stats.streak);
+    if (stats.mistakes[k]) { stats.mistakes[k]--; if (!stats.mistakes[k]) delete stats.mistakes[k]; }
+  } else {
+    stats.streak = 0;
+    if (navigator.vibrate) navigator.vibrate(60);
+    stats.mistakes[k] = (stats.mistakes[k] || 0) + 1;
+  }
+  save(); renderStats();
+
+  const upName = cur.up.v === 11 ? 'Ász' : cur.up.v;
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
+  let extra = '';
+  if (cur.code === 'Ds') extra = ' <br><small>(Ha duplázni nem lehet: megáll.)</small>';
+  else if (cur.correct === 'D') extra = ' <br><small>(Ha duplázni nem lehet: lap.)</small>';
+  fb.innerHTML = (ok ? '<b>✔ Helyes!</b> ' : `<b>✘ Hibás.</b> Te: ${ACT_NAME[a]}. `) +
+    `${handTitle(cur.info)} vs. osztó ${upName} →<b>${ACT_NAME[cur.correct]}</b>${extra}` +
+    `<div class="why"><b>Miért?</b> ${explain(cur.info, cur.col, cur.correct, cur.code)}</div>` +
+    `<div>${miniRow(cur.info, cur.col)}</div>`;
+
+  if (ok && document.getElementById('autoNext').checked) autoTimer = setTimeout(newHand, 2500);
+}
+
+/* ================== EXPLANATIONS ================== */
+// Approx. dealer bust chance by upcard (multi-deck)
+const DEALER_BUST = [35, 37, 40, 42, 42, 26, 24, 23, 21, 17];
+function playerBust(t) { // chance one card busts a hard total t
+  let n = 0;
+  for (let v = 2; v <= 9; v++) if (t + v > 21) n++;
+  if (t + 10 > 21) n += 4;
+  return Math.round(n / 13 * 100);
+}
+function explain(info, col, act, code) {
+  const up = UP[col], weak = col <= 4, bust = DEALER_BUST[col];
+  const upTxt = weak
+    ? `Az osztó ${up}-es lapja <b>gyenge</b>: kb. <b>${bust}%</b> eséllyel besokall.`
+    : `Az osztó ${up === 'A' ? 'ásza' : up + '-es lapja'} <b>erős</b>: csak kb. <b>${bust}%</b> eséllyel sokall be, és valószínűleg 17–21 közé jut (számolj úgy, hogy a takart lap 10-es).`;
+  const k = info.key;
+  if (act === 'R') {
+    return `${upTxt} Ez a kéz itt hosszú távon jóval több mint 50%-ban veszít. Feladással a tét felét visszakapod – ez kevesebb veszteség, mint végigjátszani.`;
+  }
+  if (info.kind === 'hard') {
+    if (k <= 8) return `${k}-ből egy lappal <b>nem tudsz besokallni</b>, viszont ${k} túl kevés a győzelemhez. Mindig kérj lapot.`;
+    if (k >= 17) return `${k}-ről lapot kérni túl veszélyes: <b>${playerBust(k)}%</b> eséllyel besokallnál. Állj meg, és bízz benne, hogy az osztó kevesebbet húz vagy besokall.`;
+    if (k <= 11) {
+      if (act === 'D') return `${upTxt} ${k}-ből egy lappal nem sokallhatsz be, és sok a 10-es értékű lap (31%), ami ${k + 10}-et ad. Erős helyzetben vagy, ezért érdemes <b>duplázni</b> – több pénz egy jó esélyű kézre.`;
+      return `${upTxt} ${k}-ből nem tudsz besokallni, tehát lapot kell kérni – de a duplázás itt nem éri meg, mert az osztó lapja túl erős${col === 0 ? ' (a 2-es nem elég gyenge hozzá)' : ''}.`;
+    }
+    // 12-16
+    if (act === 'S') return `${upTxt} Ha lapot kérsz, <b>${playerBust(k)}%</b> eséllyel besokallsz. Gyenge osztó ellen hagyd, hogy <b>ő kockáztasson</b>: neki kötelező 17-ig húznia.`;
+    if (k === 12 && col <= 1) return `12-ből csak a 10-es értékű lap sokall be (<b>${playerBust(12)}%</b>). Az osztó 2/3-as lapja nem elég gyenge (csak ~${bust}% bust), ezért itt jobban jársz, ha húzol.`;
+    return `${upTxt} Ha megállsz ${k}-en, csak akkor nyersz, ha az osztó besokall – ez ritka. Bár húzással <b>${playerBust(k)}%</b> eséllyel besokallsz, megállva még többször vesztenél, ezért <b>kérj lapot</b>.`;
+  }
+  if (info.kind === 'soft') {
+    const t = 11 + k;
+    const softTxt = `Lágy ${t}: az ász 1-et is érhet, ezért <b>egy lappal nem sokallhatsz be</b>.`;
+    if (act === 'D') return `${softTxt} ${upTxt} Kockázat nélkül javíthatsz, és az osztó gyenge – ilyenkor <b>duplázással</b> több pénzt teszel egy kedvező helyzetre.${code === 'Ds' ? ' Ha duplázni nem lehet, állj meg (18 elég jó).' : ''}`;
+    if (act === 'H') return `${softTxt} ${t < 18 ? `${t} gyenge kéz, ezért húzz –` : `18 kevés az osztó erős lapja ellen (valószínűleg 19–20 lesz neki), így húzz –`} nincs mit veszítened a próbálkozással.`;
+    if (t >= 19) return `Lágy ${t} nagyon erős kéz – tartsd meg, a húzással többet rontanál, mint javítanál.`;
+    return `${upTxt} Lágy 18 jó kéz: az osztó itt gyakran 17-et vagy 18-at húz, amit a 18-ad legyőz vagy döntetlen. ${col === 0 ? 'A 2-es nem elég gyenge a duplázáshoz.' : ''}`;
+  }
+  // pairs
+  if (k === 11) return `Két ász együtt csak lágy 12 – gyenge. Szétválasztva <b>mindkét kéz ásszal indul</b>, ami 10-es lappal 21. Mindig splitelj.`;
+  if (k === 10) return `20 az egyik legjobb kéz (csak 21 veri). Egy szinte biztosan nyerő kezet ne bonts szét két bizonytalanra.`;
+  if (k === 5) return `Két 5-öst <b>soha ne splitelj</b>: együtt 10, ami kiváló kiinduló kéz. Kezeld kemény 10-ként${act === 'D' ? ' – duplázz' : ''}.`;
+  if (k === 8 && act === 'P') return `16 a legrosszabb kéz a blackjackben. Két 8-asból két önálló kéz lesz, amik 18-cal indulhatnak – sokkal jobb, mint egy 16-tal játszani.`;
+  if (k === 9) return act === 'S'
+    ? (up === '7'
+      ? `Az osztó 7-ese mellett a takart lap legtöbbször 10-es, így neki 17 lesz – a 18-ad ezt <b>legyőzi</b>. Felesleges szétbontani.`
+      : `Az osztó ${up === 'A' ? 'ásza' : '10-ese'} ellen valószínűleg 19–21 lesz neki. Két 9-es külön kézként még rosszabbul járna, és dupla tétet kockáztatnál – a 18 a legkisebb rossz.`)
+    : `${upTxt} 18 közepes kéz, de két 9-es külön jó indulás – ennél az osztólapnál többet nyersz két kézzel.`;
+  if (act === 'P') return `${upTxt} Egyben ${2 * k} gyenge kéz. Gyenge osztó ellen megéri <b>két kézre</b> bontani és dupla tétet tenni, mert az osztó gyakran besokall.${code === 'Ph' ? ' (Ez csak akkor éri meg, ha split után lehet duplázni – DAS.)' : ''}`;
+  if (code === 'Ph') return `Split után itt nem lehet duplázni (DAS kikapcsolva), így a split nem éri meg – kezeld egyben ${2 * k}-ként és kérj lapot.`;
+  return `${upTxt} Erős osztó ellen ne tegyél dupla tétet két gyenge kézre. Kezeld egyben ${2 * k}-ként.`;
+}
+
+function miniRow(info, hlCol) {
+  let h = '<table class="chart mini-row"><tr><th></th>' + UP.map(u => `<th>${u}</th>`).join('') + '</tr><tr>';
+  h += `<th>${rowLabel(info.kind, info.key)}</th>`;
+  for (let c = 0; c < 10; c++) {
+    const code = rawCode(info.kind, info.key, c);
+    h += `<td class="${resolve(code)}${c === hlCol ? ' hl' : ''}">${chartLabel(code)}</td>`;
+  }
+  return h + '</tr></table>';
+}
+function rowLabel(kind, key) {
+  if (kind === 'hard') return key;
+  if (kind === 'soft') return 'A,' + key;
+  return key === 11 ? 'A,A' : `${key},${key}`;
+}
+
+/* ================== CHART TAB ================== */
+function renderChart() {
+  const wrap = document.getElementById('chartWrap'); wrap.innerHTML = '';
+  const make = (title, kind, keys) => {
+    let h = `<div><h3>${title}</h3><table class="chart"><tr><th></th>` + UP.map(u => `<th>${u}</th>`).join('') + '</tr>';
+    for (const key of keys) {
+      h += `<tr><th>${rowLabel(kind, key)}</th>`;
+      for (let c = 0; c < 10; c++) { const code = rawCode(kind, key, c); h += `<td class="${resolve(code)}">${chartLabel(code)}</td>`; }
+      h += '</tr>';
+    }
+    return h + '</table></div>';
+  };
+  wrap.innerHTML =
+    make('Kemény kezek', 'hard', [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]) +
+    make('Lágy kezek', 'soft', [2, 3, 4, 5, 6, 7, 8, 9]) +
+    make('Párok', 'pair', [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]);
+}
+
+/* ================== STATS ================== */
+function pct(a, b) { return b ? Math.round(a / b * 100) + '%' : '–'; }
+function renderStats() {
+  document.getElementById('sAcc').textContent = pct(stats.correct, stats.total);
+  document.getElementById('sTotal').textContent = stats.total;
+  document.getElementById('sStreak').textContent = stats.streak;
+  document.getElementById('sBest').textContent = stats.best;
+
+  const names = { hard: 'Kemény', soft: 'Lágy', pair: 'Párok' };
+  document.getElementById('catStats').innerHTML = Object.keys(names).map(k =>
+    `<div class="stat"><div class="v">${pct(...stats.cat[k])}</div><div class="l">${names[k]} (${stats.cat[k][1]})</div></div>`).join('');
+
+  const list = Object.entries(stats.mistakes).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  document.getElementById('weakList').innerHTML = list.length ? list.map(([k, n]) => {
+    const [kind, key, col] = k.split('|');
+    const info = { kind, key: +key };
+    return `<li><span>${handTitle(info)} vs ${UP[+col]} → <b>${ACT_NAME[resolve(rawCode(kind, +key, +col))]}</b></span><span>${n}×</span></li>`;
+  }).join('') : '<li><span>Nincs még hiba – szép munka!</span></li>';
+
+  document.getElementById('countStats').innerHTML =
+    `<div class="stat"><div class="v">${stats.count.rounds}</div><div class="l">Kör</div></div>` +
+    `<div class="stat"><div class="v">${pct(stats.count.correct, stats.count.rounds)}</div><div class="l">Pontosság</div></div>`;
+}
+
+/* ================== COUNTING ================== */
+const hiLo = v => v >= 2 && v <= 6 ? 1 : v >= 10 ? -1 : 0;
+let cRunning = 0, cTimer = null;
+function startCount() {
+  clearInterval(cTimer);
+  const n = Math.max(5, Math.min(312, +document.getElementById('cCards').value || 20));
+  const speed = +document.getElementById('cSpeed').value;
+  const group = +document.getElementById('cGroup').value;
+  const area = document.getElementById('cArea');
+  const prog = document.getElementById('cProgress');
+  document.getElementById('cAnswer').style.display = 'none';
+  const fb = document.getElementById('cFeedback'); fb.className = 'feedback'; fb.innerHTML = '';
+  cRunning = 0; let shown = 0;
+  const step = () => {
+    if (shown >= n) {
+      clearInterval(cTimer); area.innerHTML = '';
+      prog.textContent = `${n} lap lement. Mennyi a futó összeg?`;
+      document.getElementById('cAnswer').style.display = '';
+      const inp = document.getElementById('cInput'); inp.value = ''; inp.focus();
+      return;
+    }
+    area.innerHTML = '';
+    for (let i = 0; i < group && shown < n; i++, shown++) {
+      const c = makeCard(randomValue()); cRunning += hiLo(c.v); area.append(cardEl(c));
+    }
+    prog.textContent = `Lap: ${shown} / ${n}`;
+  };
+  step(); cTimer = setInterval(step, speed);
+}
+function checkCount() {
+  const val = document.getElementById('cInput').value;
+  if (val === '') return;
+  const ok = +val === cRunning;
+  stats.count.rounds++; if (ok) stats.count.correct++; save(); renderStats();
+  const fb = document.getElementById('cFeedback');
+  fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
+  fb.innerHTML = ok ? `<b>✔ Helyes!</b> Futó összeg: ${cRunning}` : `<b>✘ Nem.</b> Te: ${val}, helyes: <b>${cRunning}</b>`;
+  document.getElementById('cAnswer').style.display = 'none';
+}
+
+/* ================== FULL GAME ================== */
+const $ = id => document.getElementById(id);
+const G_LS = 'bjGame_v1';
+const DECKS = 6;
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const OUT_TXT = { win: 'Nyert', bj: 'Blackjack! (3:2)', push: 'Döntetlen', lose: 'Vesztett', bust: 'Besokallt', surr: 'Feladva' };
+const blankGameStats = () => ({ hands: 0, wins: 0, losses: 0, pushes: 0, bj: 0, dec: 0, decOk: 0 });
+
+const g = { bank: 1000, stats: blankGameStats(), shoe: [], cut: 0, bet: 25, hands: [], dealer: [],
+  active: 0, phase: 'bet', rc: 0, holeShown: false, needShuffle: false };
+try {
+  const saved = JSON.parse(localStorage.getItem(G_LS));
+  if (saved) { g.bank = saved.bank; g.stats = Object.assign(blankGameStats(), saved.stats); }
+} catch {}
+function saveGame() { localStorage.setItem(G_LS, JSON.stringify({ bank: g.bank, stats: g.stats })); }
+const fmt = n => (+n.toFixed(2)).toLocaleString('hu-HU') + ' $';
+
+function buildShoe() {
+  g.shoe = [];
+  for (let d = 0; d < DECKS; d++) for (const suit of SUITS) for (const rank of RANKS) {
+    const v = rank === 'A' ? 11 : ['10', 'J', 'Q', 'K'].includes(rank) ? 10 : +rank;
+    g.shoe.push({ v, rank, suit });
+  }
+  for (let i = g.shoe.length - 1; i > 0; i--) { const j = rand(i + 1); [g.shoe[i], g.shoe[j]] = [g.shoe[j], g.shoe[i]]; }
+  g.cut = Math.floor(52 * DECKS * 0.25); // reshuffle at 75% penetration
+  g.rc = 0; g.needShuffle = false;
+}
+function draw(visible = true) {
+  if (!g.shoe.length) buildShoe();
+  const c = g.shoe.pop();
+  if (visible) g.rc += hiLo(c.v);
+  return c;
+}
+function handVal(cards) {
+  let t = 0, a = 0;
+  for (const c of cards) { t += c.v; if (c.v === 11) a++; }
+  while (t > 21 && a) { t -= 10; a--; }
+  return { t, soft: a > 0 };
+}
+const isBJ = cards => cards.length === 2 && handVal(cards).t === 21;
+function valTxt(cards, isSplit) {
+  if (!cards.length) return '';
+  if (cards.length === 1) return cards[0].v === 11 ? 'Ász (1/11)' : `${cards[0].v}`;
+  if (isBJ(cards) && !isSplit) return 'Blackjack!';
+  const { t, soft } = handVal(cards);
+  if (t > 21) return `${t} – besokallt`;
+  return soft && t < 21 ? `Lágy ${t}` : `${t}`;
+}
+
+// What the player may do with hand h right now
+function avail(h) {
+  const two = h.cards.length === 2;
+  return {
+    canD: two && g.bank >= h.bet && !h.splitAces && (!h.split || rules.das),
+    canP: two && h.cards[0].v === h.cards[1].v && g.hands.length < 4 && g.bank >= h.bet,
+    canR: two && rules.surr && g.hands.length === 1,
+  };
+}
+function resolveCtx(code, ctx) {
+  switch (code) {
+    case 'D': return ctx.canD ? 'D' : 'H';
+    case 'Ds': return ctx.canD ? 'D' : 'S';
+    case 'P': return ctx.canP ? 'P' : 'H';
+    case 'Ph': return rules.das && ctx.canP ? 'P' : 'H';
+    case 'Rh': return ctx.canR ? 'R' : 'H';
+    case 'Rs': return ctx.canR ? 'R' : 'S';
+    case 'Rp': return ctx.canR ? 'R' : ctx.canP ? 'P' : 'H';
+    default: return code;
+  }
+}
+// Basic-strategy answer for any hand (also multi-card)
+function gCorrect(h) {
+  const col = colOf(g.dealer[0]);
+  const ctx = avail(h);
+  if (ctx.canP) {
+    const code = rawCode('pair', h.cards[0].v, col);
+    const act = resolveCtx(code, ctx);
+    if (act === 'P' || act === 'R') return { act, code, info: { kind: 'pair', key: h.cards[0].v } };
+  }
+  const { t, soft } = handVal(h.cards);
+  let info, code;
+  if (soft && t >= 13 && t <= 20) { info = { kind: 'soft', key: t - 11 }; code = rawCode('soft', t - 11, col); }
+  else if (soft) { info = { kind: 'soft', key: t - 11 }; code = t >= 19 ? 'S' : 'H'; }
+  else if (t < 5) { info = { kind: 'hard', key: t }; code = 'H'; }
+  else { info = { kind: 'hard', key: Math.min(t, 21) }; code = rawCode('hard', Math.min(t, 21), col); }
+  return { act: resolveCtx(code, ctx), code, info };
+}
+
+function coach(h, act) {
+  const c = gCorrect(h);
+  const ok = act === c.act;
+  g.stats.dec++; if (ok) g.stats.decOk++;
+  if (!$('gCoach').checked) return;
+  let why;
+  if ((c.code === 'D' || c.code === 'Ds') && c.act !== 'D')
+    why = `Ide a duplázás lenne a legjobb, de most nem lehet (csak az első két lapra${!rules.das && h.split ? ', és split után a DAS ki van kapcsolva' : ''}). Helyette: <b>${ACT_NAME[c.act]}</b>.`;
+  else if (c.code[0] === 'R' && c.act !== 'R')
+    why = `Ide a feladás lenne a legjobb, de már nem lehet (csak az első döntésnél, split előtt). Helyette: <b>${ACT_NAME[c.act]}</b>.`;
+  else why = explain(c.info, colOf(g.dealer[0]), c.act, c.code);
+  const box = $('gCoachBox');
+  box.className = 'feedback ' + (ok ? 'ok' : 'bad');
+  box.innerHTML = (ok ? '<b>✔ Jó döntés.</b>' : `<b>✘ Stratégiai hiba.</b> Te: ${ACT_NAME[act]} · helyes: <b>${ACT_NAME[c.act]}</b>`) +
+    `<div class="why">${why}</div>`;
+}
+
+function gDeal() {
+  if (g.phase === 'play' || g.phase === 'dealer') return;
+  if (g.bet <= 0) { $('gMsg').textContent = 'Előbb tegyél tétet!'; return; }
+  if (g.bet > g.bank) { g.bet = Math.floor(g.bank); if (g.bet <= 0) { renderGame(); return; } }
+  if (!g.shoe.length || g.needShuffle) { buildShoe(); $('gMsg').textContent = 'Új cipő megkeverve.'; }
+  else $('gMsg').textContent = '';
+  g.bank -= g.bet;
+  const p1 = draw(), up = draw(), p2 = draw(), hole = draw(false);
+  g.hands = [{ cards: [p1, p2], bet: g.bet }];
+  g.dealer = [up, hole]; g.holeShown = false; g.active = 0;
+  const box = $('gCoachBox'); box.className = 'feedback'; box.innerHTML = '';
+
+  const pBJ = isBJ(g.hands[0].cards), dBJ = isBJ(g.dealer);
+  if ((up.v >= 10 && dBJ) || pBJ) { // dealer peeks / player blackjack ends the round
+    g.rc += hiLo(hole.v); g.holeShown = true; g.hands[0].done = true;
+    settle(); return;
+  }
+  if (up.v === 11 && $('gCoach').checked) {
+    box.className = 'feedback';
+    box.innerHTML = '<div class="why">ℹ Az osztó ásszal áll, nincs blackjackje (belesett). <b>Biztosítást soha ne köss</b> alapstratégiával – hosszú távon veszteséges.</div>';
+  }
+  g.phase = 'play';
+  renderGame();
+}
+
+function gAct(a) {
+  if (g.phase !== 'play') return;
+  const h = g.hands[g.active], ctx = avail(h);
+  if ((a === 'D' && !ctx.canD) || (a === 'P' && !ctx.canP) || (a === 'R' && !ctx.canR)) return;
+  coach(h, a);
+  if (a === 'H') {
+    h.cards.push(draw());
+    const t = handVal(h.cards).t;
+    if (t > 21) { h.done = true; h.status = 'bust'; } else if (t === 21) h.done = true;
+  } else if (a === 'S') {
+    h.done = true;
+  } else if (a === 'D') {
+    g.bank -= h.bet; h.bet *= 2; h.doubled = true;
+    h.cards.push(draw()); h.done = true;
+    if (handVal(h.cards).t > 21) h.status = 'bust';
+  } else if (a === 'P') {
+    g.bank -= h.bet;
+    const aces = h.cards[0].v === 11;
+    const nh = { cards: [h.cards.pop()], bet: h.bet, split: true, splitAces: aces };
+    h.split = true; h.splitAces = aces;
+    h.cards.push(draw()); nh.cards.push(draw());
+    g.hands.splice(g.active + 1, 0, nh);
+    for (const x of [h, nh]) if (aces || handVal(x.cards).t === 21) x.done = true; // split aces get one card
+  } else if (a === 'R') {
+    h.done = true; h.status = 'surr'; g.bank += h.bet / 2;
+  }
+  advance();
+}
+function advance() {
+  while (g.active < g.hands.length && g.hands[g.active].done) g.active++;
+  if (g.active >= g.hands.length) dealerTurn();
+  renderGame();
+}
+function dealerTurn() {
+  g.phase = 'dealer';
+  g.rc += hiLo(g.dealer[1].v); g.holeShown = true;
+  const live = g.hands.some(h => !h.status);
+  const step = () => {
+    const { t, soft } = handVal(g.dealer);
+    if (live && (t < 17 || (t === 17 && soft && rules.h17))) {
+      g.dealer.push(draw()); renderGame(); setTimeout(step, 600);
+    } else settle();
+  };
+  setTimeout(step, 500);
+}
+function settle() {
+  const d = handVal(g.dealer).t, dBJ = isBJ(g.dealer);
+  let net = 0;
+  for (const h of g.hands) {
+    const p = handVal(h.cards).t, pBJ = isBJ(h.cards) && !h.split;
+    let out;
+    if (h.status === 'surr') out = 'surr';
+    else if (h.status === 'bust') out = 'bust';
+    else if (pBJ && !dBJ) out = 'bj';
+    else if (dBJ && !pBJ) out = 'lose';
+    else if (d > 21 || p > d) out = 'win';
+    else if (p === d) out = 'push';
+    else out = 'lose';
+    h.out = out;
+    const pay = { bj: h.bet * 2.5, win: h.bet * 2, push: h.bet, lose: 0, bust: 0, surr: 0 }[out];
+    g.bank += pay;
+    net += out === 'surr' ? -h.bet / 2 : pay - h.bet;
+    g.stats.hands++;
+    if (out === 'win' || out === 'bj') g.stats.wins++;
+    else if (out === 'push') g.stats.pushes++;
+    else g.stats.losses++;
+    if (out === 'bj') g.stats.bj++;
+  }
+  g.phase = 'done';
+  if (g.shoe.length < g.cut) g.needShuffle = true;
+  const dTxt = dBJ ? 'Az osztónak blackjackje van. ' : d > 21 ? 'Az osztó besokallt! ' : '';
+  $('gMsg').innerHTML = dTxt + (net > 0 ? `<span class="o-win">Nyertél +${fmt(net)}</span>`
+    : net < 0 ? `<span class="o-lose">Vesztettél −${fmt(-net)}</span>` : `<span class="o-push">Döntetlen</span>`) +
+    (g.needShuffle ? '<div class="hint">A cipő a végéhez ért – következő körben keverés.</div>' : '');
+  saveGame();
+  renderGame();
+}
+
+function renderGame() {
+  $('gBank').textContent = fmt(g.bank);
+  $('gBet').textContent = fmt(g.bet);
+  const dh = $('gDealer'); dh.innerHTML = '';
+  g.dealer.forEach((c, i) => dh.append(i === 1 && !g.holeShown ? backEl() : cardEl(c)));
+  $('gDealerTotal').textContent = g.dealer.length ? valTxt(g.holeShown ? g.dealer : [g.dealer[0]]) : '';
+
+  const ph = $('gHands'); ph.innerHTML = '';
+  g.hands.forEach((h, i) => {
+    const w = document.createElement('div');
+    w.className = 'ghand' + (g.phase === 'play' && i === g.active ? ' active' : '');
+    const cards = document.createElement('div'); cards.className = 'hand';
+    h.cards.forEach(c => cards.append(cardEl(c)));
+    const m = document.createElement('div'); m.className = 'meta';
+    const res = h.out ? OUT_TXT[h.out] : h.status === 'bust' ? 'Besokallt' : h.status === 'surr' ? 'Feladva' : '';
+    m.innerHTML = `${valTxt(h.cards, h.split)} · tét: ${fmt(h.bet)}${h.doubled ? ' (duplázva)' : ''}` +
+      (res ? ` · <b class="o-${h.out || h.status}">${res}</b>` : '');
+    w.append(cards, m); ph.append(w);
+  });
+
+  const play = g.phase === 'play', h = g.hands[g.active];
+  const ctx = play ? avail(h) : {};
+  $('gH').disabled = !play; $('gS').disabled = !play;
+  $('gD').disabled = !ctx.canD; $('gP').disabled = !ctx.canP; $('gR').disabled = !ctx.canR;
+  $('gR').style.display = rules.surr ? '' : 'none';
+
+  const betting = g.phase === 'bet' || g.phase === 'done';
+  document.querySelectorAll('.chip').forEach(b => b.disabled = !betting || g.bet + +b.dataset.v > g.bank);
+  $('gClear').disabled = !betting;
+  $('gDeal').disabled = !betting || g.bet <= 0;
+  $('gRefill').style.display = betting && g.bank < 10 ? '' : 'none';
+  if (betting && g.bank < 10 && !g.hands.length) $('gMsg').textContent = 'Elfogyott a pénzed – töltsd fel a bankot.';
+
+  if ($('gShowCount').checked) {
+    const decksLeft = Math.max(g.shoe.length / 52, 0.5);
+    $('gCount').textContent = `Futó összeg: ${g.rc} · Valós (true count): ${(g.rc / decksLeft).toFixed(1)} · Hátralévő: ${decksLeft.toFixed(1)} pakli`;
+  } else $('gCount').textContent = '';
+
+  const s = g.stats;
+  $('gStats').innerHTML = [
+    [s.hands, 'Kezek'], [s.wins, 'Nyert'], [s.losses, 'Vesztett'], [s.pushes, 'Döntetlen'],
+    [s.bj, 'Blackjack'], [pct(s.decOk, s.dec), 'Stratégia pontosság'],
+  ].map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+}
+
+document.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+  if (g.phase !== 'bet' && g.phase !== 'done') return;
+  g.bet = Math.min(g.bet + +b.dataset.v, g.bank); renderGame();
+});
+$('gClear').onclick = () => { g.bet = 0; renderGame(); };
+$('gDeal').onclick = gDeal;
+$('gRefill').onclick = () => { g.bank = 1000; g.bet = 25; g.hands = []; g.dealer = []; $('gMsg').textContent = 'Bank feltöltve.'; saveGame(); renderGame(); };
+document.querySelectorAll('[data-g]').forEach(b => b.onclick = () => gAct(b.dataset.g));
+$('gShowCount').onchange = renderGame;
+$('gMsg').textContent = 'Tegyél tétet a zsetonokkal, majd nyomd meg az Osztás gombot.';
+renderGame();
+
+/* ================== WIRING ================== */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === b.dataset.tab));
+  if (b.dataset.tab === 'chart') renderChart();
+  if (b.dataset.tab === 'stats') renderStats();
+});
+document.querySelectorAll('.act').forEach(b => b.onclick = () => answer(b.dataset.a));
+document.getElementById('nextBtn').onclick = newHand;
+document.getElementById('handType').onchange = newHand;
+[['ruleH17', 'h17'], ['ruleDAS', 'das'], ['ruleSurr', 'surr']].forEach(([id, k]) => {
+  const el = document.getElementById(id);
+  el.onchange = () => { rules[k] = el.checked; localStorage.setItem('bjRules', JSON.stringify(rules)); newHand(); renderChart(); renderGame(); };
+});
+try { Object.assign(rules, JSON.parse(localStorage.getItem('bjRules')) || {}); } catch {}
+document.getElementById('ruleH17').checked = rules.h17;
+document.getElementById('ruleDAS').checked = rules.das;
+document.getElementById('ruleSurr').checked = rules.surr;
+
+document.getElementById('cStart').onclick = startCount;
+document.getElementById('cCheck').onclick = checkCount;
+document.getElementById('cInput').onkeydown = e => { if (e.key === 'Enter') checkCount(); };
+document.getElementById('resetStats').onclick = () => {
+  if (confirm('Biztosan törlöd az összes statisztikát?')) { stats = blankStats(); save(); renderStats(); }
+};
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const tab = document.querySelector('.tab.active').id;
+  const k = e.key.toUpperCase();
+  const isAct = k.length === 1 && 'HSDPR'.includes(k);
+  const isNext = e.key === ' ' || e.key === 'Enter';
+  if (tab === 'drill') {
+    if (isAct) answer(k);
+    else if (isNext) { e.preventDefault(); newHand(); }
+  } else if (tab === 'game') {
+    if (isAct) gAct(k);
+    else if (isNext) { e.preventDefault(); gDeal(); }
+  }
+});
+
+if (window.innerWidth > 600) document.getElementById('settingsBox').open = true;
+// Offline mode: service worker caches the app after the first visit (only works over https / localhost)
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+newHand(); renderStats();
+</script>
+</body>
+</html>
